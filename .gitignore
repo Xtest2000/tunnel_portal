@@ -1,0 +1,16 @@
+# 构建产物（本地生成，不入库）
+dist/
+*.exe
+*.dll
+*.exe.bak-*
+
+# 运行时生成的文件 —— 里面含你私有的跳板地址、用户名、私钥路径，切勿提交
+config.json
+tunnel.log
+*.log
+
+# 编辑器 / 系统杂项
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

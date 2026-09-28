@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>内网通道 · Tunnel Portal</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171b21; --panel2:#1d2229; --line:#2a313b;
+    --txt:#e6edf3; --dim:#8b98a5; --accent:#3fb950; --red:#f85149;
+    --amber:#d29922; --blue:#4493f8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:22px}
+  h1{font-size:19px;margin:0 0 2px}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px;margin-bottom:14px}
+  .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;
+    background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:13px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+  .dot.on{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .dot.warn{background:var(--amber)}
+  .dot.off{background:var(--red)}
+  button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+  button:hover{border-color:#3d4757;background:#232a33}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#04140a}
+  button.primary:hover{filter:brightness(1.08)}
+  button.danger{background:#2a1517;border-color:#5a2328;color:#ff9d97}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.sm{padding:6px 12px;font-size:12.5px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .kv{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .kv .k{color:var(--dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  .kv .v{font-weight:600;margin-top:3px;word-break:break-all}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace}
+  pre.cmd{background:#0b0e12;border:1px solid var(--line);border-radius:9px;padding:12px;
+    font-size:12.5px;color:#a5d6ff;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+  label{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
+  input,textarea{width:100%;background:#0b0e12;border:1px solid var(--line);border-radius:8px;
+    color:var(--txt);padding:9px 11px;font-size:13px;font-family:inherit}
+  input:focus,textarea:focus{outline:none;border-color:var(--blue)}
+  textarea{resize:vertical;min-height:60px;font-family:ui-monospace,Consolas,monospace}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .switch{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--txt);font-size:13px}
+  .switch input{width:auto}
+  #log{background:#0b0e12;border:1px solid var(--line);border-radius:9px;padding:10px 12px;
+    height:230px;overflow:auto;font-size:12.3px;line-height:1.55;white-space:pre-wrap;word-break:break-all}
+  #log .t{color:#5b6570}
+  .muted{color:var(--dim);font-size:12px}
+  .hdr{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  details summary{cursor:pointer;color:var(--dim);font-weight:600;font-size:13px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:#22303f;border:1px solid #35506b;padding:9px 18px;border-radius:9px;
+    font-size:13px;opacity:0;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1}
+  .frow{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:8px;background:var(--panel2);margin-bottom:8px;font-size:13px;flex-wrap:wrap}
+  .frow code{color:#a5d6ff}
+  .frow .cur{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>内网通道 · Tunnel Portal</h1>
+  <div class="sub">一键建立 SSH 隧道到内网节点（经 VPS 作跳板）。关掉本程序前请保持窗口开启。</div>
+
+  <div class="card" id="setupBanner" style="display:none;border-color:#5a4523;background:#241d10">
+    <div style="font-weight:600;margin-bottom:6px">👋 首次使用：先填一下跳板机</div>
+    <div class="muted">本工具<b>不内置任何服务器地址</b>。请在页面下方的「设置」里填写
+      <b>VPS 地址</b>、<b>端口</b>、<b>登录用户</b>（按需填私钥路径），点「保存并重连」后即可建立通道。</div>
+  </div>
+
+  <div class="card">
+    <div class="hdr">
+      <span class="pill"><span id="dot" class="dot"></span><span id="state">连接中…</span></span>
+      <span class="muted" id="target"></span>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button id="btnStart" class="primary">▶ 建立通道</button>
+      <button id="btnStop" class="danger">■ 断开</button>
+      <button id="btnRestart" class="sm">↻ 重连</button>
+      <button id="btnQuit" class="sm danger">⏻ 退出程序</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div class="kv"><div class="k">本地端口</div><div class="v" id="kLocal">—</div></div>
+      <div class="kv"><div class="k">已运行</div><div class="v" id="kUptime">—</div></div>
+      <div class="kv"><div class="k">重连次数</div><div class="v" id="kRestart">0</div></div>
+      <div class="kv"><div class="k">进程 PID</div><div class="v" id="kPid">—</div></div>
+    </div>
+    <label>正在执行的命令</label>
+    <pre class="cmd" id="cmd"></pre>
+    <div class="row" style="margin-top:10px">
+      <button class="sm" id="btnCopy">复制命令</button>
+      <span class="muted" id="lastErr"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hdr"><strong>快速访问</strong>
+      <span class="muted">填内网目标的 IP:端口，本机自动开一个本地端口映射过去</span></div>
+    <div class="row" style="margin-top:12px;align-items:flex-end">
+      <div style="flex:2;min-width:190px">
+        <label>目标地址（内网 IP:端口）</label>
+        <input id="fTarget" placeholder="192.168.1.50:8080">
+      </div>
+      <div style="flex:1;min-width:120px">
+        <label>本地端口（留空自动分配）</label>
+        <input id="fLocal" type="number" placeholder="自动">
+      </div>
+      <button class="primary" id="btnAddForward">＋ 添加转发</button>
+    </div>
+    <div id="fwdList" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <div class="hdr"><strong>日志</strong>
+      <button class="sm" id="btnClear">清屏</button></div>
+    <div id="log" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <details id="settings">
+      <summary>设置（首次使用请填这里）</summary>
+      <div class="cols">
+        <div>
+          <label>VPS 地址 (host)</label>
+          <input id="cHost">
+          <label>端口 (port)</label>
+          <input id="cPort" type="number" placeholder="22">
+          <label>登录用户 (user)</label>
+          <input id="cUser">
+          <label>私钥文件 (identityFile，可留空用默认)</label>
+          <input id="cIdentity" placeholder="C:\Users\you\.ssh\id_rsa">
+        </div>
+        <div>
+          <label>ssh 可执行文件 (可留空自动探测)</label>
+          <input id="cSshBin" placeholder="C:\Windows\System32\OpenSSH\ssh.exe">
+          <label>端口转发 (每行：本地端口 -&gt; 远端 host:端口)</label>
+          <textarea id="cForwards" placeholder="127.0.0.1:3080 -> 127.0.0.1:3080"></textarea>
+        </div>
+      </div>
+      <div class="switch"><input type="checkbox" id="cAuto"><span>断线后自动重连</span></div>
+      <div class="switch"><input type="checkbox" id="cBatch"><span>BatchMode（不弹密码/口令提示；密钥需免密或已加载到 ssh-agent）</span></div>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" id="btnSave">保存并重连</button>
+        <span class="muted">保存后自动按新配置重建通道。</span>
+      </div>
+    </details>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let since = 0;
+
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),1600);
+}
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  return r.json();
+}
+function fmtUptime(s){
+  if(!s) return '—';
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return (h?h+'h ':'')+(m?m+'m ':'')+x+'s';
+}
+function dotClass(st){
+  if(st.running && st.localOpen) return 'dot on';
+  if(st.running) return 'dot warn';
+  return 'dot off';
+}
+function render(st){
+  $('dot').className = dotClass(st);
+  $('state').textContent = st.running
+      ? (st.localOpen ? '通道已建立' : '进程运行中（转发端口未就绪）')
+      : '未连接';
+  $('target').textContent = st.config.user+'@'+st.config.host+':'+st.config.port;
+  $('kPid').textContent = st.pid ? st.pid : '—';
+  $('kUptime').textContent = fmtUptime(st.uptimeSec);
+  $('kRestart').textContent = st.restarts;
+  const f = (st.config.forwards||[])[0];
+  $('kLocal').textContent = f ? ('127.0.0.1:'+f.localPort) : '—';
+  $('cmd').textContent = st.command || '';
+  $('lastErr').textContent = st.lastErr || '';
+  $('btnStart').disabled = st.running;
+  $('btnStop').disabled = !st.running;
+  renderForwards(st);
+  const needSetup = (st.configured === false);
+  $('setupBanner').style.display = needSetup ? 'block' : 'none';
+  if(needSetup){ const d=$('settings'); if(d && !d.open) d.open = true; }
+  $('btnStart').disabled  = st.running || needSetup;
+  $('btnRestart').disabled = needSetup;
+}
+async function poll(){
+  try{
+    const st = await api('/api/status');
+    render(st);
+    const lg = await api('/api/logs?since='+since);
+    if(lg.lines && lg.lines.length){
+      const el=$('log'); let add='';
+      for(const l of lg.lines){ add += '<span class="t">'+l.time+'</span> '+esc(l.text)+'\n'; }
+      el.insertAdjacentHTML('beforeend', add);
+      since = lg.next;
+      if(el.childElementCount>1000){ el.innerHTML=''; }
+      el.scrollTop = el.scrollHeight;
+    }
+  }catch(e){ /* server restarting */ }
+}
+function esc(s){ return (s+'').replace(/[&<>"']/g, c=>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fwdURL(f){
+  const lh=f.localHost||'127.0.0.1';
+  return 'http://'+(lh.indexOf(':')>=0?('['+lh+']'):lh)+':'+f.localPort;
+}
+function renderForwards(st){
+  const box=$('fwdList');
+  const list=(st.config&&st.config.forwards)||[];
+  if(!list.length){ box.innerHTML='<span class="muted">暂无转发</span>'; return; }
+  box.innerHTML = list.map(f=>{
+    const url=fwdURL(f);
+    return '<div class="frow"><code>'+esc(url)+'</code>'
+      + '<span class="muted">→</span><span>'+esc(f.remoteHost+':'+f.remotePort)+'</span>'
+      + '<span style="flex:1"></span>'
+      + '<button class="sm" data-act="open" data-url="'+esc(url)+'" title="用默认浏览器打开该地址（只对网页类服务有意义）">打开网页</button>'
+      + '<button class="sm" data-act="copy" data-url="'+esc(url)+'">复制</button>'
+      + '<button class="sm danger" data-act="del" data-port="'+f.localPort+'">删除</button>'
+      + '</div>';
+  }).join('');
+}
+async function refreshForm(){ try{ loadConfigIntoForm(await api('/api/config')); }catch(e){} }
+function loadConfigIntoForm(c){
+  $('cHost').value=c.host||''; $('cPort').value=c.port||'';
+  $('cUser').value=c.user||''; $('cIdentity').value=c.identityFile||'';
+  $('cSshBin').value=c.sshBinary||'';
+  $('cAuto').checked=!!c.autoRestart; $('cBatch').checked=!!c.batchMode;
+  $('cForwards').value=(c.forwards||[]).map(f=>
+    (f.localHost||'127.0.0.1')+':'+f.localPort+' -> '+f.remoteHost+':'+f.remotePort).join('\n');
+}
+function parseForwards(txt){
+  const out=[];
+  for(const raw of txt.split('\n')){
+    const line=raw.trim(); if(!line) continue;
+    const m=line.match(/^([\w.\-]*):(\d+)\s*(?:->|=>)\s*([\w.\-]+):(\d+)$/);
+    if(!m) continue;
+    out.push({localHost:m[1]||'127.0.0.1',localPort:+m[2],remoteHost:m[3],remotePort:+m[4]});
+  }
+  return out;
+}
+$('btnStart').onclick   = async()=>{ const r=await api('/api/start',{method:'POST'}); if(!r.ok) toast('启动失败: '+r.error); poll(); };
+$('btnStop').onclick    = async()=>{ await api('/api/stop',{method:'POST'}); since=0; $('log').innerHTML=''; poll(); };
+$('btnRestart').onclick = async()=>{ const r=await api('/api/restart',{method:'POST'}); if(!r.ok) toast('重连失败: '+r.error); since=0; $('log').innerHTML=''; poll(); };
+$('btnCopy').onclick    = ()=>{ navigator.clipboard.writeText($('cmd').textContent); toast('命令已复制'); };
+$('btnClear').onclick   = ()=>{ $('log').innerHTML=''; };
+$('btnQuit').onclick    = async()=>{
+  if(!confirm('退出 Tunnel Portal？隧道会断开，这个控制台页面也会失去连接。')) return;
+  try{ await api('/api/quit',{method:'POST'}); }catch(e){}
+  document.body.innerHTML='<div style="padding:48px 22px;font-size:15px">'
+    + '程序已退出，ssh 子进程也已一并结束。现在可以关闭本页面。</div>';
+};
+$('btnSave').onclick    = async()=>{
+  const cfg={
+    host:$('cHost').value.trim(), port:+$('cPort').value, user:$('cUser').value.trim(),
+    identityFile:$('cIdentity').value.trim(), sshBinary:$('cSshBin').value.trim(),
+    autoRestart:$('cAuto').checked, batchMode:$('cBatch').checked,
+    forwards:parseForwards($('cForwards').value)
+  };
+  const r=await api('/api/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+  if(!r.ok){ toast('保存失败: '+r.error); return; }
+  toast('已保存，正在按新配置重连…');
+  await api('/api/restart',{method:'POST'}); since=0; $('log').innerHTML=''; poll();
+};
+
+$('btnAddForward').onclick = async()=>{
+  const target=$('fTarget').value.trim();
+  if(!target){ toast('请填写目标地址，如 192.168.1.50:8080'); return; }
+  const btn=$('btnAddForward'); btn.disabled=true;
+  let r;
+  try{
+    r=await api('/api/forward/add',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({target, localPort:+$('fLocal').value||0})});
+  }finally{ btn.disabled=false; }
+  if(!r || !r.ok){ toast('添加失败: '+((r&&r.error)||'未知错误')); return; }
+  if(r.existed){ toast(r.note||'该目标已有转发'); }
+  else { toast('已添加 127.0.0.1:'+r.forward.localPort+'，可在下方点「打开网页」'
+               +(r.applyError?('（重建失败: '+r.applyError+'）'):'')); }
+  $('fTarget').value=''; $('fLocal').value='';
+  since=0; $('log').innerHTML='';
+  await refreshForm(); poll();
+};
+
+$('fwdList').addEventListener('click', async(e)=>{
+  const b=e.target.closest('button[data-act]'); if(!b) return;
+  const act=b.dataset.act;
+  if(act==='open'){
+    const r=await api('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:b.dataset.url})});
+    toast(r.ok?('已打开 '+r.url):('打开失败: '+r.error));
+    return;
+  }
+  if(act==='copy'){ navigator.clipboard.writeText(b.dataset.url); toast('已复制 '+b.dataset.url); return; }
+  if(act==='del'){
+    const port=+b.dataset.port;
+    if(!confirm('删除指向本条转发的映射（本地端口 '+port+'）？')) return;
+    const r=await api('/api/forward/remove',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({localPort:port})});
+    if(!r.ok){ toast('删除失败: '+r.error); return; }
+    toast('已删除');
+    since=0; $('log').innerHTML=''; await refreshForm(); poll();
+  }
+});
+
+(async()=>{ loadConfigIntoForm(await api('/api/config')); poll(); setInterval(poll, 900); })();
+</script>
+</body>
+</html>

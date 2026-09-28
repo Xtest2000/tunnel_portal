@@ -1,0 +1,33 @@
+第三方组件与依赖声明
+====================
+
+本项目（Tunnel Portal）自身以 MIT 许可证发布，见 LICENSE。
+以下为它使用到的第三方组件：
+
+一、随产物一起分发的（静态链接进 exe）
+
+1. github.com/webview/webview_go
+   许可证：MIT
+   版权：Copyright (c) 2017 Serge Zaitsev; Copyright (c) 2020 webview
+   用途：WebView2 窗口封装（界面）
+
+2. golang.org/x/sys
+   许可证：BSD-3-Clause
+   版权：Copyright (c) 2009 The Go Authors
+   用途：Windows 注册表读取（检测 WebView2 运行时）、进程与 Job Object 操作
+
+二、仅构建期使用
+
+3. Zig 自带的 mingw-w64 头文件与运行库
+   用途：从 Linux 交叉编译 Windows 产物（见 README 构建小节）
+   说明：产物只依赖 Windows 自带的系统 DLL / UCRT，未额外携带其运行时 DLL
+
+三、由用户系统提供、本项目不分发
+
+4. Microsoft Edge WebView2 Runtime
+   版权归 Microsoft，遵循 Microsoft 的许可条款
+   用途：界面渲染的运行时依赖（Win10 1803+ / Win11 通常随 Edge 自带）
+   说明：若目标机器未安装，程序会弹框提示并回退到系统默认浏览器
+
+5. Windows 自带的 OpenSSH 客户端（ssh.exe）
+   用途：实际建立 SSH 隧道
