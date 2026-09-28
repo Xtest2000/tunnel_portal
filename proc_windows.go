@@ -3,12 +3,38 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+// openExternal 用系统默认程序打开一个网址。
+//
+// 走 ShellExecuteW，不经过任何命令解释器：
+// 因此 URL 里的特殊字符不会被当成命令分隔符（早期版本用 cmd /c start，存在命令注入）。
+func openExternal(u string) error {
+	verb, err := syscall.UTF16PtrFromString("open")
+	if err != nil {
+		return err
+	}
+	target, err := syscall.UTF16PtrFromString(u)
+	if err != nil {
+		return err
+	}
+	proc := syscall.NewLazyDLL("shell32.dll").NewProc("ShellExecuteW")
+	const swShowNormal = 1
+	ret, _, _ := proc.Call(0,
+		uintptr(unsafe.Pointer(verb)),
+		uintptr(unsafe.Pointer(target)),
+		0, 0, swShowNormal)
+	if ret <= 32 { // ShellExecuteW 约定：返回值 <= 32 表示失败
+		return fmt.Errorf("系统未能打开该地址（ShellExecuteW 返回 %d）", ret)
+	}
+	return nil
+}
 
 // hideConsole 让子进程不分配控制台窗口。
 //

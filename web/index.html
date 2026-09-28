@@ -161,12 +161,18 @@
 <script>
 const $ = id => document.getElementById(id);
 let since = 0;
+// 访问令牌由程序启动时随机生成，并拼在窗口打开的 URL 上。
+// 页面拿到后立刻把它从地址栏抹掉，之后每个 API 请求都带上。
+const TOKEN = (new URLSearchParams(location.search)).get('token') || '';
+try{ if(TOKEN) history.replaceState(null, '', location.pathname); }catch(e){}
 
 function toast(msg){
   const t=$('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),1600);
 }
 async function api(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({'X-Auth-Token': TOKEN}, opts.headers || {});
   const r = await fetch(path, opts);
   return r.json();
 }
@@ -320,7 +326,17 @@ $('fwdList').addEventListener('click', async(e)=>{
   }
 });
 
-(async()=>{ loadConfigIntoForm(await api('/api/config')); poll(); setInterval(poll, 900); })();
+(async()=>{
+  if(!TOKEN){
+    document.body.innerHTML = '<div style="padding:48px 22px;font-size:15px;line-height:1.8">'
+      + '这个控制台需要通过<b>程序自带的窗口</b>打开。<br>'
+      + '直接在地址栏访问 127.0.0.1:8760 不带访问令牌，所有接口都会拒绝请求。</div>';
+    return;
+  }
+  loadConfigIntoForm(await api('/api/config'));
+  poll();
+  setInterval(poll, 900);
+})();
 </script>
 </body>
 </html>

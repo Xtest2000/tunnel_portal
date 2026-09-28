@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -75,7 +76,8 @@ type Manager struct {
 func NewManager(cfg Config, logPath string) *Manager {
 	m := &Manager{cfg: cfg, bin: resolveSSH(cfg)}
 	if logPath != "" {
-		if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+		// 0600：日志里有完整命令行（跳板地址、用户名、内网目标），别让同机其它用户读走
+		if f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err == nil {
 			m.logFile = f
 		}
 	}
@@ -133,8 +135,16 @@ func (m *Manager) buildArgs() []string {
 	return args
 }
 
+var reKeyArg = regexp.MustCompile(`-i\s+\S+`)
+
+// redactCommand 把命令行里的私钥路径替换掉。
+// 命令行会进日志、也会显示在界面上，而日志经常被复制粘贴到 issue/聊天里求助。
+func redactCommand(s string) string {
+	return reKeyArg.ReplaceAllString(s, "-i <私钥路径已隐藏>")
+}
+
 func (m *Manager) commandString() string {
-	return m.bin + " " + strings.Join(m.buildArgs(), " ")
+	return redactCommand(m.bin + " " + strings.Join(m.buildArgs(), " "))
 }
 
 func (m *Manager) Start() error {

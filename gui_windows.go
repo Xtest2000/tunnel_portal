@@ -61,9 +61,9 @@ func blockForever() {
 
 // runGUI 打开程序自带的窗口界面（WebView2），不再依赖外部浏览器。
 // 窗口关闭后本函数返回，调用方随即退出程序。
-func runGUI(mux *http.ServeMux, addr, url string, open bool) {
+func runGUI(h http.Handler, addr, url string, open bool) {
 	go func() {
-		if err := http.ListenAndServe(addr, mux); err != nil {
+		if err := http.ListenAndServe(addr, h); err != nil {
 			messageBox("Tunnel Portal", "本地控制台启动失败：\n"+err.Error(), 0x10)
 		}
 	}()
@@ -77,7 +77,7 @@ func runGUI(mux *http.ServeMux, addr, url string, open bool) {
 		messageBox("Tunnel Portal",
 			"未检测到 WebView2 运行时，本次改用默认浏览器打开控制台。\n\n"+
 				"想要独立窗口，请安装「Microsoft Edge WebView2 Runtime」后重新启动本程序。", 0x30)
-		openBrowser(url)
+		_ = openBrowser(url)
 		blockForever()
 	}
 
@@ -85,7 +85,7 @@ func runGUI(mux *http.ServeMux, addr, url string, open bool) {
 	w := webview.New(false)
 	if w == nil {
 		messageBox("Tunnel Portal", "界面初始化失败，改用默认浏览器打开控制台。", 0x30)
-		openBrowser(url)
+		_ = openBrowser(url)
 		blockForever()
 	}
 	defer w.Destroy()
