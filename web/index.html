@@ -153,6 +153,11 @@
         <button class="primary" id="btnSave">保存并重连</button>
         <span class="muted">保存后自动按新配置重建通道。</span>
       </div>
+      <label>控制台地址（含访问令牌，可粘到浏览器里打开；令牌每次启动都会变）</label>
+      <div class="row">
+        <input id="cConsoleURL" readonly style="flex:1;min-width:240px">
+        <button class="sm" id="btnCopyConsole">复制</button>
+      </div>
     </details>
   </div>
 </div>
@@ -334,6 +339,13 @@ $('fwdList').addEventListener('click', async(e)=>{
     return;
   }
   loadConfigIntoForm(await api('/api/config'));
+  // 把"带令牌的控制台地址"显示出来：gui 版没有控制台窗口，
+  // 想看/想手动在浏览器打开时，只能从这里拿。
+  $('cConsoleURL').value = location.origin + '/?token=' + TOKEN;
+  $('btnCopyConsole').onclick = ()=>{
+    navigator.clipboard.writeText($('cConsoleURL').value);
+    toast('已复制控制台地址');
+  };
   poll();
   setInterval(poll, 900);
 })();
