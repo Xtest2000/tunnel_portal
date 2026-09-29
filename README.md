@@ -92,7 +92,7 @@ ssh -N -o ServerAliveInterval=15 -o ExitOnForwardFailure=yes \
 
 1. **一次性访问令牌**：每次启动随机生成（只存在内存里，随程序退出失效），拼在程序打开窗口的
    URL 上。所有 `/api/*` 都必须带这个令牌，否则一律拒绝。
-   想手动在浏览器里打开控制台，用启动时终端里打印的那条「带令牌地址」。
+   令牌只交给程序自己的窗口——控制台也就**只能从程序自带窗口打开**。
 2. **Host / Origin 校验**：只接受回环 Host；带 `Origin` 的请求其来源必须是自身。
    这挡住的是 DNS rebinding —— 没有这道检查，你一边开隧道一边逛恶意网页，对方就能读走你的配置。
 3. **`/api/open` 不再经过 shell**：改用系统 API（Windows 上 `ShellExecuteW`）打开，

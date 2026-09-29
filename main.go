@@ -409,8 +409,6 @@ func main() {
 	consoleURL := "http://" + addr + "/?token=" + token
 	mgr.appendLog("控制台已就绪: http://" + addr + "/ （已启用一次性访问令牌）")
 	fmt.Println("Tunnel Portal 控制台: http://" + addr + "/")
-	// 带令牌的完整地址只打印到终端（不写日志）：方便你在浏览器里手动打开控制台。
-	fmt.Println("带令牌地址（仅本终端可见，未写入日志）:", consoleURL)
 	fmt.Println("配置文件:", cfgPath)
 	if !strictHost {
 		mgr.appendLog("⚠ 控制台监听在非回环地址 " + addr +
